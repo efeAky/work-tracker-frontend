@@ -18,7 +18,7 @@ export default function Signup() {
     setError("");
     setIsLoading(true);
 
-    // 1. Basic Validation
+    // Check if all required fields are filled
     if (
       !fullNameInput ||
       !emailInput ||
@@ -30,32 +30,46 @@ export default function Signup() {
       return;
     }
 
+    // Validate email format using regex
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailInput)) {
+      setError("Invalid email format");
+      setIsLoading(false);
+      return;
+    }
+
+    // Validate password length (minimum 8 characters)
+    if (passwordInput.length < 8) {
+      setError("Password must be at least 8 characters long");
+      setIsLoading(false);
+      return;
+    }
+
+    // Password match check
     if (passwordInput !== confirmPasswordInput) {
       setError("Passwords do not match");
       setIsLoading(false);
       return;
     }
 
-    // 2. Password Strength Check
-    if (passwordInput.length < 8) {
-      setError("Password must contain minimum 8 characters");
-      setIsLoading(false);
-      return;
-    }
-
     try {
-      const response = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      // Send signup request to backend
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/signup`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            fullName: fullNameInput,
+            email: emailInput,
+            password: passwordInput,
+            confirmPassword: confirmPasswordInput, // Send confirmPassword to backend for validation
+            role: roleInput, // Sending 'worker' or 'supervisor'
+          }),
         },
-        body: JSON.stringify({
-          fullName: fullNameInput,
-          email: emailInput,
-          password: passwordInput,
-          role: roleInput, // Sending 'worker' or 'supervisor'
-        }),
-      });
+      );
 
       const data = await response.json();
 
@@ -65,8 +79,8 @@ export default function Signup() {
 
       // Redirect to login after successful registration
       router.push("/auth/login");
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Signup failed");
     } finally {
       setIsLoading(false);
     }
@@ -74,7 +88,8 @@ export default function Signup() {
 
   const handleSocialLogin = (provider: "google" | "github") => {
     setIsLoading(true);
-    window.location.href = `http://localhost:5000/api/auth/${provider}`;
+    // Redirecting directly to the backend OAuth URL
+    window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/api/auth/${provider}`;
   };
 
   return (
@@ -153,7 +168,7 @@ export default function Signup() {
           disabled={isLoading}
           className="bg-white border border-gray-300 text-black p-2 rounded hover:bg-gray-50"
         >
-          Google
+          Sign up with Google
         </button>
 
         <button
@@ -162,145 +177,9 @@ export default function Signup() {
           disabled={isLoading}
           className="bg-black text-white p-2 rounded hover:bg-gray-800"
         >
-          GitHub
+          Sign up with GitHub
         </button>
       </div>
     </div>
   );
 }
-
-/* "use client";
-
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-
-export default function Signup() {
-  const [usernameInput, setUsernameInput] = useState("");
-  const [passwordInput, setPasswordInput] = useState("");
-  const [confirmPasswordInput, setConfirmPasswordInput] = useState("");
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
-
-  const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault(); 
-    setError("");
-    setIsLoading(true);
-
-    if (!usernameInput || !passwordInput || !confirmPasswordInput) {
-      setError("All fields are required");
-      setIsLoading(false);
-      return;
-    }
-
-    if (passwordInput !== confirmPasswordInput) {
-      setError("Passwords do not match");
-      setIsLoading(false);
-      return;
-    }
-
-    if (passwordInput.length < 8) {
-      setError("Password must contain minimum 8 characters");
-      setIsLoading(false);
-      return;
-    } 
-    else if (!/[A-Z]/.test(passwordInput)) {
-      setError("Password must contain at least one uppercase letter");
-      setIsLoading(false);
-      return;
-    } 
-    else if (!/[!@#$%^&*(),.?\":{}|<>]/.test(passwordInput)) {
-      setError("Password must contain at least one special character");
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username: usernameInput,
-          password: passwordInput,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Signup failed");
-      }
-
-      router.push("/auth/login");
-    } catch (err: any) {
-      setError(err.message);
-      setIsLoading(false);
-    }
-  };
-
-  const handleGoogleSignup = async () => {
-    try {
-      setIsLoading(true);
-      window.location.href = "/api/auth/google";
-    } catch (err: any) {
-      setError(err.message);
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <div>
-      <form onSubmit={handleSignup}>
-        <input
-          placeholder="Enter username"
-          value={usernameInput}
-          onChange={(e) => setUsernameInput(e.target.value)}
-          disabled={isLoading}
-        />
-
-        <input
-          type="password"
-          placeholder="Enter password"
-          value={passwordInput}
-          onChange={(e) => setPasswordInput(e.target.value)}
-          disabled={isLoading}
-        />
-
-        <input
-          type="password"
-          placeholder="Confirm password"
-          value={confirmPasswordInput}
-          onChange={(e) => setConfirmPasswordInput(e.target.value)}
-          disabled={isLoading}
-        />
-
-        <button 
-          type="submit"
-          disabled={isLoading}
-        >
-          {isLoading ? "Signing up..." : "Sign Up"}
-        </button>
-
-        {error && !isLoading && (
-          <div>
-            {error}
-          </div>
-        )}
-      </form>
-
-      <div>
-        <span>or</span>
-      </div>
-
-      <button
-        type="button"
-        onClick={handleGoogleSignup}
-        disabled={isLoading}
-      >
-        Sign up with Google
-      </button>
-    </div>
-  );
-} */

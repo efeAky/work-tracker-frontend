@@ -15,24 +15,37 @@ export default function Login() {
     setError("");
     setIsLoading(true);
 
+    // Check if all required fields are filled
     if (!emailInput || !passwordInput) {
       setError("All fields are required");
       setIsLoading(false);
       return;
     }
 
+    // Validate email format using regex
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailInput)) {
+      setError("Invalid email format");
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      // Note: This relies on the Next.js rewrite we discussed to proxy to Port 5000
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      // Send login request with credentials to receive cookie
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include", // IMPORTANT: This allows cookies to be sent and received
+          body: JSON.stringify({
+            email: emailInput,
+            password: passwordInput,
+          }),
         },
-        body: JSON.stringify({
-          email: emailInput,
-          password: passwordInput,
-        }),
-      });
+      );
 
       const data = await response.json();
 
@@ -40,15 +53,15 @@ export default function Login() {
         throw new Error(data.message || "Login failed");
       }
 
-      // Save JWT Token for authenticated requests
-      localStorage.setItem("token", data.token);
-
-      // Save user info (optional, but helpful for UI)
-      localStorage.setItem("user", JSON.stringify(data.user));
+      // Cookie is automatically stored by browser (no localStorage needed for token!)
+      // Only save user info for UI purposes (optional)
+      if (data.user) {
+        localStorage.setItem("user", JSON.stringify(data.user));
+      }
 
       router.push("/dashboard");
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Login failed");
     } finally {
       setIsLoading(false);
     }
@@ -57,7 +70,7 @@ export default function Login() {
   const handleSocialLogin = (provider: "google" | "github") => {
     setIsLoading(true);
     // Redirecting directly to the backend OAuth URL
-    window.location.href = `http://localhost:5000/api/auth/${provider}`;
+    window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/api/auth/${provider}`;
   };
 
   return (
@@ -120,108 +133,3 @@ export default function Login() {
     </div>
   );
 }
-
-/* "use client";
-
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-
-export default function Login() {
-  const [usernameInput, setUsernameInput] = useState("");
-  const [passwordInput, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
-
-  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setError("");
-    setIsLoading(true);
-
-    if (!usernameInput || !passwordInput) {
-      setError("All fields are required");
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username: usernameInput,
-          password: passwordInput,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Login failed");
-      }
-
-      router.push("/dashboard");
-    } catch (err: any) {
-      setError(err.message);
-      setIsLoading(false);
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    try {
-      setIsLoading(true);
-      window.location.href = "/api/auth/google";
-    } catch (err: any) {
-      setError(err.message);
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <div>
-      <form onSubmit={handleLogin}>
-        <input
-          placeholder="Enter username"
-          value={usernameInput}
-          onChange={(e) => setUsernameInput(e.target.value)}
-          disabled={isLoading}
-        />
-
-        <input
-          type="password"
-          placeholder="Enter password"
-          value={passwordInput}
-          onChange={(e) => setPassword(e.target.value)}
-          disabled={isLoading}
-        />
-
-        <button 
-          type="submit"
-          disabled={isLoading}
-        >
-          {isLoading ? "Logging in..." : "Log In"}
-        </button>
-
-        {error && !isLoading && (
-          <div>
-            {error}
-          </div>
-        )}
-      </form>
-
-      <div>
-        <span>or</span>
-      </div>
-
-      <button
-        type="button"
-        onClick={handleGoogleLogin}
-        disabled={isLoading}
-      >
-        Log in with Google
-      </button>
-    </div>
-  );
-} */
