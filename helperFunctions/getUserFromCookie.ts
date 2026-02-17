@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-export async function getUserFromCookie() {
+export async function getUserFromCookie(allowedRoles?: string[]) {
   const cookieStore = await cookies();
   const token = cookieStore.get("token");
 
@@ -27,7 +27,23 @@ export async function getUserFromCookie() {
     }
 
     const data = await response.json();
-    return data.user; // Returns { id, email, role }
+    const user = data.user; // Returns { userId, email, userRole, companyId, fullname }
+
+    // Check if user has required role
+    if (allowedRoles && !allowedRoles.includes(user.userRole)) {
+      // Redirect based on their actual role
+      if (user.userRole === "admin") {
+        redirect("/admin/dashboard");
+      } else if (user.userRole === "supervisor") {
+        redirect("/supervisor/dashboard");
+      } else if (user.userRole === "worker") {
+        redirect("/worker/dashboard");
+      } else {
+        redirect("/auth/login"); // Fallback
+      }
+    }
+
+    return user;
   } catch (error) {
     redirect("/auth/login");
   }

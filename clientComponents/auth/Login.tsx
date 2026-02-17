@@ -39,7 +39,7 @@ export default function Login() {
           headers: {
             "Content-Type": "application/json",
           },
-          credentials: "include", // IMPORTANT: This allows cookies to be sent and received
+          credentials: "include", // IMPORTANT: Allows cookies to be sent and received
           body: JSON.stringify({
             email: emailInput,
             password: passwordInput,
@@ -53,24 +53,26 @@ export default function Login() {
         throw new Error(data.message || "Login failed");
       }
 
-      // Cookie is automatically stored by browser (no localStorage needed for token!)
-      // Only save user info for UI purposes (optional)
+      // Save user info for UI purposes
       if (data.user) {
         localStorage.setItem("user", JSON.stringify(data.user));
+        
+        // Redirect based on user role
+        if (data.user.userRole === "admin") {
+          router.push("/admin/dashboard");
+        } else if (data.user.userRole === "supervisor") {
+          router.push("/supervisor/dashboard");
+        } else if (data.user.userRole === "worker") {
+          router.push("/worker/dashboard");
+        } else {
+          router.push("/dashboard"); // Fallback
+        }
       }
-
-      router.push("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleSocialLogin = (provider: "google" | "github") => {
-    setIsLoading(true);
-    // Redirecting directly to the backend OAuth URL
-    window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/api/auth/${provider}`;
   };
 
   return (
@@ -106,30 +108,6 @@ export default function Login() {
           <div className="text-red-500 text-sm mt-2">{error}</div>
         )}
       </form>
-
-      <div className="divider my-4 flex items-center gap-2">
-        <hr className="grow" /> <span>or</span> <hr className="grow" />
-      </div>
-
-      <div className="social-logins flex flex-col gap-2">
-        <button
-          type="button"
-          onClick={() => handleSocialLogin("google")}
-          disabled={isLoading}
-          className="bg-white border border-gray-300 text-black p-2 rounded hover:bg-gray-50"
-        >
-          Log in with Google
-        </button>
-
-        <button
-          type="button"
-          onClick={() => handleSocialLogin("github")}
-          disabled={isLoading}
-          className="bg-black text-white p-2 rounded hover:bg-gray-800"
-        >
-          Log in with GitHub
-        </button>
-      </div>
     </div>
   );
 }

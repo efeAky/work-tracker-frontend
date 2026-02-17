@@ -10,17 +10,7 @@ export default function LoginPage() {
             Login to your account
           </h1>
         </div>
-        
         <Login />
-        
-        <p>
-          Don't have an account?{" "}
-          <Link 
-            href="/auth/signup" 
-          >
-            Signup
-          </Link>
-        </p>
       </div>
     </div>
   );
