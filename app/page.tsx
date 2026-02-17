@@ -9,9 +9,6 @@ export default function LandingPage() {
         allocation for every team member in one centralized dashboard.
       </p>
         <div>
-          <Link href="/auth/signup">
-            Signup
-          </Link>
           <Link href="/auth/login">
             Login
           </Link>
