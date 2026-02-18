@@ -56,10 +56,10 @@ export default function Login() {
       // Save user info for UI purposes
       if (data.user) {
         localStorage.setItem("user", JSON.stringify(data.user));
-        
+
         // Redirect based on user role
         if (data.user.userRole === "admin") {
-          router.push("/admin/dashboard");
+          router.push("/admin/create-user");
         } else if (data.user.userRole === "supervisor") {
           router.push("/supervisor/dashboard");
         } else if (data.user.userRole === "worker") {
