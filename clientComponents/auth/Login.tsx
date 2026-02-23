@@ -15,14 +15,12 @@ export default function Login() {
     setError("");
     setIsLoading(true);
 
-    // Check if all required fields are filled
     if (!emailInput || !passwordInput) {
       setError("All fields are required");
       setIsLoading(false);
       return;
     }
 
-    // Validate email format using regex
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(emailInput)) {
       setError("Invalid email format");
@@ -31,20 +29,14 @@ export default function Login() {
     }
 
     try {
-      // Send login request with credentials to receive cookie
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include", // IMPORTANT: Allows cookies to be sent and received
-          body: JSON.stringify({
-            email: emailInput,
-            password: passwordInput,
-          }),
-        },
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ email: emailInput, password: passwordInput }),
+        }
       );
 
       const data = await response.json();
@@ -53,19 +45,17 @@ export default function Login() {
         throw new Error(data.message || "Login failed");
       }
 
-      // Save user info for UI purposes
-      if (data.user) {
+      if (data.user && data.token) {
+        // ✅ set cookie on port 3000 so Next.js server components can read it
+        document.cookie = `token=${data.token}; path=/; max-age=${10 * 60 * 60}`;
         localStorage.setItem("user", JSON.stringify(data.user));
 
-        // Redirect based on user role
         if (data.user.userRole === "admin") {
-          router.push("/admin/create-user");
+          router.push("/roles/admin");
         } else if (data.user.userRole === "supervisor") {
-          router.push("/supervisor/dashboard");
+          router.push("/roles/supervisor");
         } else if (data.user.userRole === "worker") {
-          router.push("/worker/dashboard");
-        } else {
-          router.push("/dashboard"); // Fallback
+          router.push("/roles/worker");
         }
       }
     } catch (err) {
@@ -86,7 +76,6 @@ export default function Login() {
           disabled={isLoading}
           required
         />
-
         <input
           type="password"
           placeholder="Enter password"
@@ -95,7 +84,6 @@ export default function Login() {
           disabled={isLoading}
           required
         />
-
         <button
           type="submit"
           disabled={isLoading}
@@ -103,7 +91,6 @@ export default function Login() {
         >
           {isLoading ? "Logging in..." : "Log In"}
         </button>
-
         {error && !isLoading && (
           <div className="text-red-500 text-sm mt-2">{error}</div>
         )}
