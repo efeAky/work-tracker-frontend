@@ -46,8 +46,8 @@ export default function Login() {
       }
 
       if (data.user && data.token) {
-        // ✅ set cookie on port 3000 so Next.js server components can read it
         document.cookie = `token=${data.token}; path=/; max-age=${10 * 60 * 60}`;
+        localStorage.setItem("token", data.token); // ✅ ADD THIS LINE
         localStorage.setItem("user", JSON.stringify(data.user));
 
         if (data.user.userRole === "admin") {
