@@ -6,11 +6,10 @@ import { useRouter } from "next/navigation";
 type UserFormProps = {
   mode: "create" | "edit";
   initialData?: {
-    userId?: number;
+    userId?: string | number;
     email?: string;
     fullname?: string;
     userRole?: string;
-    companyId?: number;
   };
 };
 
@@ -18,12 +17,11 @@ export default function UserForm({ mode, initialData }: UserFormProps) {
   const router = useRouter();
 
   const [formData, setFormData] = useState({
-    userId: initialData?.userId?.toString() || "",
+    userId: initialData?.userId ? Number(initialData.userId) : 0,
     email: initialData?.email || "",
     fullname: initialData?.fullname || "",
     password: "",
     userRole: initialData?.userRole || "worker",
-    companyId: initialData?.companyId?.toString() || "1",
   });
 
   const [message, setMessage] = useState({ type: "", text: "" });
@@ -35,60 +33,62 @@ export default function UserForm({ mode, initialData }: UserFormProps) {
     setMessage({ type: "", text: "" });
 
     try {
+      const token = localStorage.getItem("token");
+
+      // Correctly define endpoint inside handleSubmit
       const endpoint =
         mode === "create"
           ? `${process.env.NEXT_PUBLIC_API_URL}/api/users/register`
           : `${process.env.NEXT_PUBLIC_API_URL}/api/users/${formData.userId}`;
 
-      const method = mode === "create" ? "POST" : "PUT";
+      // Create a unique numeric ID for new users
+      const generatedNumericId = Math.floor(Date.now() / 1000);
 
+      const payload = {
+        ...formData,
+        userId:
+          mode === "create" ? generatedNumericId : Number(formData.userId),
+        companyId: 1, // Matching your seeded Admin's companyId
+      };
+      console.log("Token from storage:", token);
       const response = await fetch(endpoint, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          ...formData,
-          userId: Number(formData.userId),
-          companyId: Number(formData.companyId),
-        }),
+        method: mode === "create" ? "POST" : "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
-      if (!response.ok)
-        throw new Error(data.message || "Operation failed");
+      if (!response.ok) throw new Error(data.message || "Operation failed");
 
-      setMessage({
-        type: "success",
-        text:
-          mode === "create"
-            ? "User created successfully!"
-            : "User updated successfully!",
-      });
-
-      setTimeout(() => router.push("/admin"), 1500);
+      setMessage({ type: "success", text: "User registered successfully!" });
+      setTimeout(() => router.push("/roles/admin"), 1500);
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Operation failed";
-      setMessage({ type: "error", text: errorMessage });
+      setMessage({
+        type: "error",
+        text: err instanceof Error ? err.message : "Error",
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="max-w-md mx-auto mt-10 p-6 bg-white shadow-lg rounded-lg">
-      <h1 className="text-2xl font-bold mb-6 text-gray-800">
-        {mode === "create" ? "Create New Account" : "Edit User"}
+    <div className="max-w-md mx-auto mt-10 p-8 bg-white shadow-2xl rounded-4xl border border-slate-100">
+      <h1 className="text-2xl font-black mb-8 text-slate-900 tracking-tight">
+        {mode === "create" ? "New Team Member" : "Edit Profile"}
       </h1>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">
             Full Name
           </label>
           <input
             type="text"
-            className="w-full p-2 border rounded mt-1"
+            className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-slate-900 font-bold focus:ring-4 focus:ring-blue-100 transition-all outline-none"
             value={formData.fullname}
             onChange={(e) =>
               setFormData({ ...formData, fullname: e.target.value })
@@ -98,12 +98,12 @@ export default function UserForm({ mode, initialData }: UserFormProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Email Address
+          <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">
+            Email
           </label>
           <input
             type="email"
-            className="w-full p-2 border rounded mt-1"
+            className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-slate-900 font-bold focus:ring-4 focus:ring-blue-100 transition-all outline-none"
             value={formData.email}
             onChange={(e) =>
               setFormData({ ...formData, email: e.target.value })
@@ -114,12 +114,12 @@ export default function UserForm({ mode, initialData }: UserFormProps) {
 
         {mode === "create" && (
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Temporary Password
+            <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">
+              Password
             </label>
             <input
               type="password"
-              className="w-full p-2 border rounded mt-1"
+              className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-slate-900 font-bold focus:ring-4 focus:ring-blue-100 transition-all outline-none"
               value={formData.password}
               onChange={(e) =>
                 setFormData({ ...formData, password: e.target.value })
@@ -130,11 +130,11 @@ export default function UserForm({ mode, initialData }: UserFormProps) {
         )}
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Assign Role
+          <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">
+            Role
           </label>
           <select
-            className="w-full p-2 border rounded mt-1 bg-white"
+            className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-slate-900 font-bold focus:ring-4 focus:ring-blue-100 transition-all outline-none appearance-none"
             value={formData.userRole}
             onChange={(e) =>
               setFormData({ ...formData, userRole: e.target.value })
@@ -148,23 +148,17 @@ export default function UserForm({ mode, initialData }: UserFormProps) {
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full bg-indigo-600 text-white py-2 rounded font-semibold hover:bg-indigo-700 disabled:bg-gray-400 transition"
+          className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black text-lg shadow-xl hover:bg-black transition-all active:scale-[0.98] disabled:bg-slate-200"
         >
-          {isLoading
-            ? mode === "create"
-              ? "Creating..."
-              : "Updating..."
-            : mode === "create"
-            ? "Register User"
-            : "Update User"}
+          {isLoading ? "Saving..." : "Confirm & Register"}
         </button>
 
         {message.text && (
           <div
-            className={`mt-4 p-3 rounded text-sm ${
+            className={`p-4 rounded-2xl text-center font-bold text-sm ${
               message.type === "success"
-                ? "bg-green-100 text-green-700"
-                : "bg-red-100 text-red-700"
+                ? "bg-green-50 text-green-600"
+                : "bg-red-50 text-red-600"
             }`}
           >
             {message.text}

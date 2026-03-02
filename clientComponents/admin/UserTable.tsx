@@ -16,7 +16,7 @@ export default function UserTable({ users }: Props) {
   return (
     <div>
       <div className="flex justify-end mb-4">
-        <Link href="/admin/create">
+        <Link href="admin/create">
           <button className="bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700">
             + Create User
           </button>
@@ -33,7 +33,7 @@ export default function UserTable({ users }: Props) {
           </tr>
         </thead>
         <tbody>
-          {users.map(user => (
+          {users.map((user) => (
             <tr key={user.userId}>
               <td className="border p-2">{user.fullname}</td>
               <td className="border p-2">{user.email}</td>
