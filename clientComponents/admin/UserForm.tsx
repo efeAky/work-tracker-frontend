@@ -35,22 +35,29 @@ export default function UserForm({ mode, initialData }: UserFormProps) {
     try {
       const token = localStorage.getItem("token");
 
-      // Correctly define endpoint inside handleSubmit
       const endpoint =
         mode === "create"
           ? `${process.env.NEXT_PUBLIC_API_URL}/api/users/register`
           : `${process.env.NEXT_PUBLIC_API_URL}/api/users/${formData.userId}`;
 
-      // Create a unique numeric ID for new users
       const generatedNumericId = Math.floor(Date.now() / 1000);
 
-      const payload = {
-        ...formData,
-        userId:
-          mode === "create" ? generatedNumericId : Number(formData.userId),
-        companyId: 1, // Matching your seeded Admin's companyId
-      };
-      console.log("Token from storage:", token);
+      // Only include password in the payload when creating
+      const payload =
+        mode === "create"
+          ? {
+              ...formData,
+              userId: generatedNumericId,
+              companyId: 1,
+            }
+          : {
+              userId: Number(formData.userId),
+              email: formData.email,
+              fullname: formData.fullname,
+              userRole: formData.userRole,
+              companyId: 1,
+            };
+
       const response = await fetch(endpoint, {
         method: mode === "create" ? "POST" : "PUT",
         headers: {
@@ -63,7 +70,10 @@ export default function UserForm({ mode, initialData }: UserFormProps) {
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Operation failed");
 
-      setMessage({ type: "success", text: "User registered successfully!" });
+      setMessage({
+        type: "success",
+        text: mode === "create" ? "User registered successfully!" : "User updated successfully!",
+      });
       setTimeout(() => router.push("/roles/admin"), 1500);
     } catch (err) {
       setMessage({
@@ -150,7 +160,11 @@ export default function UserForm({ mode, initialData }: UserFormProps) {
           disabled={isLoading}
           className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black text-lg shadow-xl hover:bg-black transition-all active:scale-[0.98] disabled:bg-slate-200"
         >
-          {isLoading ? "Saving..." : "Confirm & Register"}
+          {isLoading
+            ? "Saving..."
+            : mode === "create"
+            ? "Confirm & Register"
+            : "Save Changes"}
         </button>
 
         {message.text && (
