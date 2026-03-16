@@ -39,7 +39,7 @@ export default function UserTable({ users }: Props) {
               <td className="border p-2">{user.email}</td>
               <td className="border p-2">{user.userRole}</td>
               <td className="border p-2 space-x-2">
-                <Link href={`/admin/${user.userId}/edit`}>
+                <Link href={`admin/${user.userId}/edit`}>
                   <button className="bg-yellow-400 text-white py-1 px-2 rounded hover:bg-yellow-500">
                     Edit
                   </button>
