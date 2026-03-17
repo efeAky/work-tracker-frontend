@@ -12,7 +12,7 @@ const navConfig: Record<string, { label: string; href: string }[]> = {
   supervisor: [
     { label: "Dashboard", href: "/roles/supervisor" },
     { label: "Tasks", href: "/roles/supervisor/tasks" },
-    { label: "Employees", href: "/roles/supervisor/employees" },
+    { label: "Employees", href: "/roles/supervisor/workers" },
   ],
   worker: [
     { label: "Dashboard", href: "/roles/worker" },

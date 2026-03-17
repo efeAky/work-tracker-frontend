@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 export interface Worker {
   userId: number;
   fullname: string;
-  role: string;
+  userRole: string;
 }
 
 interface WorkerSearchProps {
@@ -35,7 +35,7 @@ export default function WorkerSearch({ onSelect }: WorkerSearchProps) {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
-          },
+          }
         );
 
         if (res.status === 401) {
@@ -45,7 +45,6 @@ export default function WorkerSearch({ onSelect }: WorkerSearchProps) {
         }
 
         const data = await res.json();
-        // Ensure data is an array before setting state
         setResults(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Search error:", err);
@@ -55,13 +54,12 @@ export default function WorkerSearch({ onSelect }: WorkerSearchProps) {
       }
     };
 
-    // Debounce the search: wait 300ms after user stops typing
     const timer = setTimeout(() => {
       fetchWorkers();
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [query]); // This triggers the effect whenever 'query' changes
+  }, [query]);
 
   return (
     <div className="relative w-full">
@@ -78,25 +76,22 @@ export default function WorkerSearch({ onSelect }: WorkerSearchProps) {
         )}
       </div>
 
-      {/* Results Dropdown */}
       {results.length > 0 && (
         <div className="absolute z-50 w-full mt-2 bg-white border border-slate-100 rounded-3xl shadow-2xl max-h-60 overflow-y-auto p-2">
           {results.map((worker) => (
             <button
               key={worker.userId}
-              type="button" // Prevents form submission
+              type="button"
               onClick={() => {
-                onSelect(worker); // Send worker to parent
-                setQuery(worker.fullname); // Show selected name in input
-                setResults([]); // Close dropdown
+                onSelect(worker);
+                setQuery(worker.fullname);
+                setResults([]);
               }}
               className="w-full text-left px-4 py-3 hover:bg-slate-50 rounded-2xl transition-colors flex flex-col"
             >
-              <span className="font-bold text-slate-800">
-                {worker.fullname}
-              </span>
+              <span className="font-bold text-slate-800">{worker.fullname}</span>
               <span className="text-xs text-slate-400 uppercase tracking-widest font-bold">
-                ID: {worker.userId}
+                {worker.userRole}
               </span>
             </button>
           ))}
