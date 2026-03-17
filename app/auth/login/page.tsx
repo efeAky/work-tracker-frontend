@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function Login() {
   const [emailInput, setEmailInput] = useState("");
@@ -15,86 +16,121 @@ export default function Login() {
     setError("");
     setIsLoading(true);
 
-    if (!emailInput || !passwordInput) {
-      setError("All fields are required");
-      setIsLoading(false);
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(emailInput)) {
-      setError("Invalid email format");
-      setIsLoading(false);
-      return;
-    }
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ email: emailInput, password: passwordInput }),
-        },
-      );
+      const response = await fetch(`${apiUrl}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email: emailInput, password: passwordInput }),
+      });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Login failed");
+        throw new Error(data.message || "Invalid credentials");
       }
 
       if (data.user && data.token) {
         document.cookie = `token=${data.token}; path=/; max-age=${10 * 60 * 60}`;
-        localStorage.setItem("token", data.token); // ✅ ADD THIS LINE
+        localStorage.setItem("token", data.token);
         localStorage.setItem("user", JSON.stringify(data.user));
 
-        if (data.user.userRole === "admin") {
-          router.push("/roles/admin");
-        } else if (data.user.userRole === "supervisor") {
-          router.push("/roles/supervisor");
-        } else if (data.user.userRole === "worker") {
-          router.push("/roles/worker");
-        }
+        const roleRoutes: Record<string, string> = {
+          admin: "/roles/admin",
+          supervisor: "/roles/supervisor",
+          worker: "/roles/worker/tasks", // Redirect worker directly to assignments
+        };
+
+        router.push(roleRoutes[data.user.userRole] || "/");
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="auth-container">
-      <form onSubmit={handleLogin} className="flex flex-col gap-4">
-        <input
-          type="email"
-          placeholder="Enter email"
-          value={emailInput}
-          onChange={(e) => setEmailInput(e.target.value)}
-          disabled={isLoading}
-          required
-        />
-        <input
-          type="password"
-          placeholder="Enter password"
-          value={passwordInput}
-          onChange={(e) => setPasswordInput(e.target.value)}
-          disabled={isLoading}
-          required
-        />
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="bg-blue-600 text-white p-2 rounded"
-        >
-          {isLoading ? "Logging in..." : "Log In"}
-        </button>
-        {error && !isLoading && (
-          <div className="text-red-500 text-sm mt-2">{error}</div>
-        )}
-      </form>
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-indigo-50/50 via-slate-50 to-slate-50">
+      <div className="w-full max-w-[440px] animate-in fade-in zoom-in-95 duration-500">
+        
+        {/* Logo/Brand Area */}
+        <div className="text-center mb-10">
+          <Link href="/" className="inline-block mb-6">
+            <span className="text-3xl font-black tracking-tighter text-slate-900 px-4 py-2 bg-white rounded-2xl shadow-sm border border-slate-100">
+              Work<span className="text-indigo-600">Tracker</span>
+            </span>
+          </Link>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Welcome Back</h1>
+          <p className="text-slate-400 font-bold mt-2 text-sm uppercase tracking-widest">Secure Access Gateway</p>
+        </div>
+
+        {/* Login Card */}
+        <div className="bg-white rounded-[40px] shadow-2xl shadow-slate-200/60 border border-slate-100 p-8 sm:p-10 relative overflow-hidden">
+          {/* Subtle background flair */}
+          <div className="absolute -top-24 -right-24 w-48 h-48 bg-indigo-50 rounded-full blur-3xl opacity-50"></div>
+          
+          <form onSubmit={handleLogin} className="space-y-6 relative z-10">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase text-indigo-500 tracking-widest ml-1">Work Email</label>
+              <input
+                type="email"
+                placeholder="name@company.com"
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                disabled={isLoading}
+                className="w-full bg-slate-50 border-transparent rounded-2xl px-6 py-4.5 text-slate-900 font-bold focus:bg-white focus:ring-4 focus:ring-indigo-100 transition-all outline-none border border-slate-50 focus:border-indigo-200"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between items-center ml-1">
+                <label className="text-[10px] font-black uppercase text-indigo-500 tracking-widest">Secret Key</label>
+              </div>
+              <input
+                type="password"
+                placeholder="••••••••"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                disabled={isLoading}
+                className="w-full bg-slate-50 border-transparent rounded-2xl px-6 py-4.5 text-slate-900 font-bold focus:bg-white focus:ring-4 focus:ring-indigo-100 transition-all outline-none border border-slate-50 focus:border-indigo-200"
+                required
+              />
+            </div>
+
+            {error && (
+              <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-[11px] font-black uppercase tracking-widest text-center border border-red-100 animate-in shake-in-1 duration-300">
+                ⚠️ {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-slate-900 hover:bg-black text-white rounded-2xl py-5 font-black text-lg shadow-xl shadow-indigo-100 transition-all active:scale-[0.98] disabled:bg-slate-200"
+            >
+              {isLoading ? (
+                <div className="flex items-center justify-center gap-3">
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <span>Verifying...</span>
+                </div>
+              ) : (
+                "Authorize Login"
+              )}
+            </button>
+          </form>
+        </div>
+
+        {/* Support Links */}
+        <div className="mt-10 text-center">
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+            Trouble logging in? <span className="text-indigo-600 cursor-pointer hover:underline">Support Portal</span>
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
