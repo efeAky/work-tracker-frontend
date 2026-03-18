@@ -40,7 +40,7 @@ export default function Login() {
         const roleRoutes: Record<string, string> = {
           admin: "/roles/admin",
           supervisor: "/roles/supervisor",
-          worker: "/roles/worker/tasks", // Redirect worker directly to assignments
+          worker: "/roles/worker",
         };
 
         router.push(roleRoutes[data.user.userRole] || "/");
@@ -55,8 +55,8 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-indigo-50/50 via-slate-50 to-slate-50">
       <div className="w-full max-w-[440px] animate-in fade-in zoom-in-95 duration-500">
-        
-        {/* Logo/Brand Area */}
+
+        {/* Brand */}
         <div className="text-center mb-10">
           <Link href="/" className="inline-block mb-6">
             <span className="text-3xl font-black tracking-tighter text-slate-900 px-4 py-2 bg-white rounded-2xl shadow-sm border border-slate-100">
@@ -64,45 +64,45 @@ export default function Login() {
             </span>
           </Link>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">Welcome Back</h1>
-          <p className="text-slate-400 font-bold mt-2 text-sm uppercase tracking-widest">Secure Access Gateway</p>
         </div>
 
         {/* Login Card */}
         <div className="bg-white rounded-[40px] shadow-2xl shadow-slate-200/60 border border-slate-100 p-8 sm:p-10 relative overflow-hidden">
-          {/* Subtle background flair */}
           <div className="absolute -top-24 -right-24 w-48 h-48 bg-indigo-50 rounded-full blur-3xl opacity-50"></div>
-          
+
           <form onSubmit={handleLogin} className="space-y-6 relative z-10">
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase text-indigo-500 tracking-widest ml-1">Work Email</label>
+              <label className="text-[10px] font-black uppercase text-indigo-500 tracking-widest ml-1">
+                Email
+              </label>
               <input
                 type="email"
                 placeholder="name@company.com"
                 value={emailInput}
                 onChange={(e) => setEmailInput(e.target.value)}
                 disabled={isLoading}
-                className="w-full bg-slate-50 border-transparent rounded-2xl px-6 py-4.5 text-slate-900 font-bold focus:bg-white focus:ring-4 focus:ring-indigo-100 transition-all outline-none border border-slate-50 focus:border-indigo-200"
+                className="w-full bg-slate-50 border-transparent rounded-2xl px-6 py-4 text-slate-900 font-bold focus:bg-white focus:ring-4 focus:ring-indigo-100 transition-all outline-none border border-slate-50 focus:border-indigo-200"
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <div className="flex justify-between items-center ml-1">
-                <label className="text-[10px] font-black uppercase text-indigo-500 tracking-widest">Secret Key</label>
-              </div>
+              <label className="text-[10px] font-black uppercase text-indigo-500 tracking-widest ml-1">
+                Password
+              </label>
               <input
                 type="password"
                 placeholder="••••••••"
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
                 disabled={isLoading}
-                className="w-full bg-slate-50 border-transparent rounded-2xl px-6 py-4.5 text-slate-900 font-bold focus:bg-white focus:ring-4 focus:ring-indigo-100 transition-all outline-none border border-slate-50 focus:border-indigo-200"
+                className="w-full bg-slate-50 border-transparent rounded-2xl px-6 py-4 text-slate-900 font-bold focus:bg-white focus:ring-4 focus:ring-indigo-100 transition-all outline-none border border-slate-50 focus:border-indigo-200"
                 required
               />
             </div>
 
             {error && (
-              <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-[11px] font-black uppercase tracking-widest text-center border border-red-100 animate-in shake-in-1 duration-300">
+              <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-[11px] font-black uppercase tracking-widest text-center border border-red-100">
                 ⚠️ {error}
               </div>
             )}
@@ -115,20 +115,13 @@ export default function Login() {
               {isLoading ? (
                 <div className="flex items-center justify-center gap-3">
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  <span>Verifying...</span>
+                  <span>Logging in...</span>
                 </div>
               ) : (
-                "Authorize Login"
+                "Log In"
               )}
             </button>
           </form>
-        </div>
-
-        {/* Support Links */}
-        <div className="mt-10 text-center">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-            Trouble logging in? <span className="text-indigo-600 cursor-pointer hover:underline">Support Portal</span>
-          </p>
         </div>
       </div>
     </div>

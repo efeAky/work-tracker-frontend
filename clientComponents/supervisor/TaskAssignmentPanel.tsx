@@ -11,8 +11,9 @@ type Task = {
   dueDate: string;
   status: "toDo" | "inProgress" | "done" | "failed";
   assigneeId: number;
-  assigneeName?: string;
 };
+
+type UserMap = Record<number, string>;
 
 const statusBadge: Record<string, string> = {
   toDo: "bg-slate-100 text-slate-500",
@@ -22,9 +23,9 @@ const statusBadge: Record<string, string> = {
 };
 
 const statusLabel: Record<string, string> = {
-  toDo: "Pending",
+  toDo: "To Do",
   inProgress: "In Progress",
-  done: "Finished",
+  done: "Done",
   failed: "Failed",
 };
 
@@ -36,6 +37,7 @@ export default function TaskAssignmentPanel() {
   const [instructions, setInstructions] = useState("");
   const [loading, setLoading] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [userMap, setUserMap] = useState<UserMap>({});
   const [showForm, setShowForm] = useState(false);
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
@@ -65,8 +67,28 @@ export default function TaskAssignmentPanel() {
     }
   };
 
+  const fetchUsers = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${apiUrl}/api/users`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const users = await res.json();
+        const map: UserMap = {};
+        users.forEach((u: { userId: number; fullname: string }) => {
+          map[u.userId] = u.fullname;
+        });
+        setUserMap(map);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchTasks();
+    fetchUsers();
   }, []);
 
   const getTasksForDate = (date: Date) =>
@@ -109,7 +131,7 @@ export default function TaskAssignmentPanel() {
         setTargetWorker(null);
         setSelectedDate(null);
         setShowForm(false);
-        alert(`Success! Task assigned.`);
+        alert("Task assigned!");
       } else {
         const errorData = await response.json();
         alert(errorData.message || "Failed");
@@ -123,23 +145,23 @@ export default function TaskAssignmentPanel() {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Responsive Header */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500 mb-1">Supervisor Dashboard</p>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Overview</h1>
+          <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500 mb-1">Supervisor</p>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Dashboard</h1>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={() => setShowForm(!showForm)}
             className={`flex-1 sm:flex-none px-6 py-3 rounded-2xl text-[13px] font-black transition-all active:scale-95 shadow-lg ${
-              showForm 
-                ? "bg-white text-slate-900 border border-slate-200" 
+              showForm
+                ? "bg-white text-slate-900 border border-slate-200"
                 : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100"
             }`}
           >
-            {showForm ? "✕ Close Form" : "+ Create New Task"}
+            {showForm ? "✕ Close" : "+ Create Task"}
           </button>
 
           <div className="flex items-center bg-white border border-slate-200 rounded-2xl p-1 shadow-sm">
@@ -162,14 +184,14 @@ export default function TaskAssignmentPanel() {
         </div>
       </div>
 
-      {/* Responsive Form */}
+      {/* Create Task Form */}
       {showForm && (
         <div className="bg-white rounded-[32px] shadow-2xl shadow-slate-200/50 border border-slate-100 p-6 sm:p-10 animate-in zoom-in-95 duration-300">
           <div className="max-w-4xl mx-auto">
-            <h2 className="text-xl font-black text-slate-900 mb-8 text-center uppercase tracking-tighter">Assign New Work</h2>
+            <h2 className="text-xl font-black text-slate-900 mb-8 text-center uppercase tracking-tighter">New Task</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-4">
-                <label className="block text-[10px] font-black uppercase text-indigo-500 tracking-[0.2em]">1. Select Assignee</label>
+                <label className="block text-[10px] font-black uppercase text-indigo-500 tracking-[0.2em]">1. Select Worker</label>
                 <WorkerSearch onSelect={(worker: Worker) => setTargetWorker(worker)} />
                 {targetWorker && (
                   <div className="p-4 bg-slate-900 text-white rounded-[24px] flex items-center gap-4 shadow-xl shadow-slate-200 ring-4 ring-slate-50">
@@ -178,24 +200,24 @@ export default function TaskAssignmentPanel() {
                     </div>
                     <div>
                       <p className="text-sm font-black leading-tight tracking-tight">{targetWorker.fullname}</p>
-                      <p className="text-white/40 text-[9px] mt-1 uppercase font-black tracking-widest">Worker Account</p>
+                      <p className="text-white/40 text-[9px] mt-1 uppercase font-black tracking-widest">{targetWorker.userRole}</p>
                     </div>
                   </div>
                 )}
               </div>
 
               <div className="space-y-4">
-                <label className="block text-[10px] font-black uppercase text-indigo-500 tracking-[0.2em]">2. Task & Deadline</label>
+                <label className="block text-[10px] font-black uppercase text-indigo-500 tracking-[0.2em]">2. Task Details</label>
                 <div className="space-y-3">
                   <input
                     className="w-full bg-slate-50 border-transparent rounded-[20px] px-5 py-4 text-slate-900 font-extrabold text-sm placeholder:text-slate-300 focus:bg-white focus:ring-4 focus:ring-indigo-100 transition-all outline-none border border-slate-50 focus:border-indigo-200"
-                    placeholder="Brief objective..."
+                    placeholder="Task title..."
                     value={taskTitle}
                     onChange={(e) => setTaskTitle(e.target.value)}
                   />
                   <textarea
                     className="w-full bg-slate-50 border-transparent rounded-[20px] px-5 py-4 text-slate-900 font-bold text-sm placeholder:text-slate-300 focus:bg-white focus:ring-4 focus:ring-indigo-100 transition-all outline-none h-24 resize-none border border-slate-50 focus:border-indigo-200"
-                    placeholder="Details..."
+                    placeholder="Instructions..."
                     value={instructions}
                     onChange={(e) => setInstructions(e.target.value)}
                   />
@@ -211,7 +233,7 @@ export default function TaskAssignmentPanel() {
                   disabled={!targetWorker || !taskTitle || !selectedDate || loading}
                   className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-[20px] py-4 font-black text-sm shadow-xl shadow-indigo-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none transition-all active:scale-[0.98] mt-2"
                 >
-                  {loading ? "Publishing..." : "Assign Task"}
+                  {loading ? "Saving..." : "Assign Task"}
                 </button>
               </div>
             </div>
@@ -219,7 +241,7 @@ export default function TaskAssignmentPanel() {
         </div>
       )}
 
-      {/* Weekly Calendar Grid - Responsive */}
+      {/* Weekly Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4">
         {weekDays.map((date) => {
           const isToday = new Date().toDateString() === date.toDateString();
@@ -228,14 +250,14 @@ export default function TaskAssignmentPanel() {
           return (
             <div
               key={date.toISOString()}
-              className={`rounded-[28px] border flex flex-col min-h-[300px] transition-all duration-300 ${
-                isToday 
-                  ? "border-indigo-500 ring-2 ring-indigo-50 bg-white" 
+              className={`rounded-[28px] border flex flex-col transition-all duration-300 ${
+                isToday
+                  ? "border-indigo-500 ring-2 ring-indigo-50 bg-white"
                   : "border-slate-100 bg-white/50 hover:bg-white hover:border-slate-200"
-              } shadow-sm overflow-hidden group`}
+              } shadow-sm overflow-hidden`}
             >
-              {/* Day Header - Optimized size */}
-              <div className={`px-4 py-5 text-center border-b ${isToday ? "bg-indigo-500 border-indigo-500 text-white" : "bg-white border-slate-50"}`}>
+              {/* Day Header */}
+              <div className={`px-4 py-4 text-center border-b ${isToday ? "bg-indigo-500 border-indigo-500 text-white" : "bg-white border-slate-50"}`}>
                 <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-1 ${isToday ? "text-indigo-100" : "text-slate-400"}`}>
                   {date.toLocaleDateString("en-US", { weekday: "short" })}
                 </p>
@@ -244,39 +266,42 @@ export default function TaskAssignmentPanel() {
                 </p>
               </div>
 
-              {/* Day Tasks List */}
-              <div className="flex flex-col gap-2 p-2 flex-1">
+              {/* Tasks */}
+              <div className="flex flex-col gap-2 p-2 flex-1 min-h-[160px]">
                 {dayTasks.length === 0 ? (
                   <div className="flex-1 flex items-center justify-center opacity-30">
-                    <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest italic">Free</p>
+                    <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Free</p>
                   </div>
                 ) : (
                   dayTasks.map((task) => (
                     <div
                       key={task.taskId}
-                      className="bg-white rounded-[18px] px-3 py-3 border border-slate-100 shadow-sm hover:shadow-md transition-all border-l-4 border-l-slate-200"
-                      style={{ borderLeftColor: task.status === 'done' ? '#10b981' : task.status === 'inProgress' ? '#6366f1' : '#cbd5e1' }}
+                      className="bg-white rounded-[18px] px-3 py-3 border border-slate-100 shadow-sm hover:shadow-md transition-all border-l-4"
+                      style={{
+                        borderLeftColor:
+                          task.status === "done" ? "#10b981" :
+                          task.status === "inProgress" ? "#6366f1" :
+                          task.status === "failed" ? "#ef4444" : "#cbd5e1",
+                      }}
                     >
-                      <div className="space-y-3">
-                        <div className="pb-2 border-b border-slate-50">
-                          <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5 leading-none">Worker</p>
+                      <div className="space-y-2">
+                        <div className="pb-1.5 border-b border-slate-50">
+                          <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-0.5">Worker</p>
                           <p className="text-[10px] font-black text-slate-900 truncate">
-                            {task.assigneeName || "Anonymous"}
+                            {userMap[task.assigneeId] || `#${task.assigneeId}`}
                           </p>
                         </div>
-                        
+
                         <div>
-                          <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5 leading-none">Task</p>
+                          <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-0.5">Task</p>
                           <p className="text-[11px] font-extrabold text-slate-800 leading-tight line-clamp-2">
                             {task.title}
                           </p>
                         </div>
 
-                        <div className="pt-1">
-                          <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border whitespace-nowrap inline-block max-w-full truncate ${statusBadge[task.status]}`}>
-                            {statusLabel[task.status]}
-                          </span>
-                        </div>
+                        <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full inline-block ${statusBadge[task.status]}`}>
+                          {statusLabel[task.status]}
+                        </span>
                       </div>
                     </div>
                   ))

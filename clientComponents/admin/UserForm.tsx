@@ -45,11 +45,7 @@ export default function UserForm({ mode, initialData }: UserFormProps) {
 
       const payload: any =
         mode === "create"
-          ? {
-              ...formData,
-              userId: generatedNumericId,
-              companyId: 1,
-            }
+          ? { ...formData, userId: generatedNumericId, companyId: 1 }
           : {
               userId: Number(formData.userId),
               email: formData.email,
@@ -76,7 +72,7 @@ export default function UserForm({ mode, initialData }: UserFormProps) {
 
       setMessage({
         type: "success",
-        text: mode === "create" ? "Identity registered!" : "Identity updated!",
+        text: mode === "create" ? "User created!" : "User updated!",
       });
       setTimeout(() => router.push("/roles/admin/users"), 1200);
     } catch (err) {
@@ -92,69 +88,61 @@ export default function UserForm({ mode, initialData }: UserFormProps) {
   return (
     <div className="max-w-xl mx-auto py-10 px-4 animate-in fade-in zoom-in-95 duration-500">
       <div className="text-center mb-10">
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-500 mb-2">User Registry System</p>
         <h1 className="text-4xl font-black text-slate-900 tracking-tight">
-          {mode === "create" ? "Identity Creation" : "Profile Revision"}
+          {mode === "create" ? "Create User" : "Edit User"}
         </h1>
       </div>
 
       <div className="bg-white rounded-[48px] shadow-2xl shadow-slate-200/50 border border-slate-100 p-8 sm:p-12 relative overflow-hidden">
-        {/* Subtle decorative background flair */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-full blur-3xl opacity-50 -mr-16 -mt-16"></div>
-        
+
         <form onSubmit={handleSubmit} className="space-y-8 relative z-10">
           <div className="space-y-6">
             <div className="space-y-2">
               <label className="block text-[10px] font-black uppercase tracking-widest text-indigo-500 ml-1">
-                Full Identity Name
+                Full Name
               </label>
               <input
                 type="text"
-                placeholder="Ex. Marcus Aurelius"
-                className="w-full bg-slate-50 border-transparent rounded-2xl px-6 py-4.5 text-slate-900 font-bold focus:bg-white focus:ring-4 focus:ring-indigo-100 transition-all outline-none border border-slate-50 focus:border-indigo-200"
+                placeholder="e.g. John Smith"
+                className="w-full bg-slate-50 border-transparent rounded-2xl px-6 py-4 text-slate-900 font-bold focus:bg-white focus:ring-4 focus:ring-indigo-100 transition-all outline-none border border-slate-50 focus:border-indigo-200"
                 value={formData.fullname}
-                onChange={(e) =>
-                  setFormData({ ...formData, fullname: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, fullname: e.target.value })}
                 required
               />
             </div>
 
             <div className="space-y-2">
               <label className="block text-[10px] font-black uppercase tracking-widest text-indigo-500 ml-1">
-                Contact Address (Email)
+                Email
               </label>
               <input
                 type="email"
                 placeholder="name@company.com"
-                className="w-full bg-slate-50 border-transparent rounded-2xl px-6 py-4.5 text-slate-900 font-bold focus:bg-white focus:ring-4 focus:ring-indigo-100 transition-all outline-none border border-slate-50 focus:border-indigo-200"
+                className="w-full bg-slate-50 border-transparent rounded-2xl px-6 py-4 text-slate-900 font-bold focus:bg-white focus:ring-4 focus:ring-indigo-100 transition-all outline-none border border-slate-50 focus:border-indigo-200"
                 value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
               />
             </div>
 
             <div className="space-y-2">
               <label className="block text-[10px] font-black uppercase tracking-widest text-indigo-500 ml-1">
-                {mode === "create" ? "Access Key (Password)" : "New Password (Optional)"}
+                {mode === "create" ? "Password" : "New Password (Optional)"}
               </label>
               <input
                 type="password"
-                placeholder={mode === "create" ? "••••••••••••" : "Leave blank to keep current"}
-                className="w-full bg-slate-50 border-transparent rounded-2xl px-6 py-4.5 text-slate-900 font-bold focus:bg-white focus:ring-4 focus:ring-indigo-100 transition-all outline-none border border-slate-50 focus:border-indigo-200"
+                placeholder={mode === "create" ? "••••••••" : "Leave blank to keep current"}
+                className="w-full bg-slate-50 border-transparent rounded-2xl px-6 py-4 text-slate-900 font-bold focus:bg-white focus:ring-4 focus:ring-indigo-100 transition-all outline-none border border-slate-50 focus:border-indigo-200"
                 value={formData.password}
-                onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 required={mode === "create"}
               />
             </div>
 
             <div className="space-y-2">
               <label className="block text-[10px] font-black uppercase tracking-widest text-indigo-500 ml-1">
-                System Classification
+                Role
               </label>
               <div className="grid grid-cols-2 gap-3">
                 {["worker", "supervisor"].map((role) => (
@@ -182,10 +170,10 @@ export default function UserForm({ mode, initialData }: UserFormProps) {
               className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-5 rounded-[24px] font-black text-lg shadow-2xl shadow-indigo-100 transition-all active:scale-[0.98] disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none"
             >
               {isLoading
-                ? "Indexing..."
+                ? "Saving..."
                 : mode === "create"
-                ? "Authorize Registration"
-                : "Commit Updates"}
+                ? "Create User"
+                : "Save Changes"}
             </button>
 
             <button
@@ -193,7 +181,7 @@ export default function UserForm({ mode, initialData }: UserFormProps) {
               onClick={() => router.back()}
               className="w-full bg-slate-50 text-slate-400 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-100 hover:text-slate-900 transition-all"
             >
-              Cancel Operation
+              Cancel
             </button>
           </div>
 
