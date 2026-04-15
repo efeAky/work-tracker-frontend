@@ -63,7 +63,9 @@ export default function Login() {
               Work<span className="text-indigo-600">Tracker</span>
             </span>
           </Link>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Welcome Back</h1>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+            Welcome Back
+          </h1>
         </div>
 
         {/* Login Card */}
@@ -71,6 +73,8 @@ export default function Login() {
           <div className="absolute -top-24 -right-24 w-48 h-48 bg-indigo-50 rounded-full blur-3xl opacity-50"></div>
 
           <form onSubmit={handleLogin} className="space-y-6 relative z-10">
+            
+            {/* Email */}
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase text-indigo-500 tracking-widest ml-1">
                 Email
@@ -86,6 +90,7 @@ export default function Login() {
               />
             </div>
 
+            {/* Password */}
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase text-indigo-500 tracking-widest ml-1">
                 Password
@@ -101,12 +106,39 @@ export default function Login() {
               />
             </div>
 
+            {/* Demo Buttons (ADDED) */}
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setEmailInput("DemoWorker@company.com");
+                  setPasswordInput("DemoWorker123");
+                }}
+                className="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-2xl py-3 font-black text-sm transition-all"
+              >
+                Use Demo Worker
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setEmailInput("DemoSupervisor@company.com");
+                  setPasswordInput("DemoSupervisor123");
+                }}
+                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-2xl py-3 font-black text-sm transition-all"
+              >
+                Use Demo Supervisor
+              </button>
+            </div>
+
+            {/* Error */}
             {error && (
               <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-[11px] font-black uppercase tracking-widest text-center border border-red-100">
                 ⚠️ {error}
               </div>
             )}
 
+            {/* Submit */}
             <button
               type="submit"
               disabled={isLoading}
@@ -121,6 +153,7 @@ export default function Login() {
                 "Log In"
               )}
             </button>
+
           </form>
         </div>
       </div>
