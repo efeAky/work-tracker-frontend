@@ -1,318 +1,124 @@
 "use client";
+import { useState, useEffect, useRef } from "react";
 
-import { useState, useEffect } from "react";
-
-type Task = {
-  taskId: number;
-  title: string;
-  dueDate: string;
-  status: "toDo" | "inProgress" | "done" | "failed";
-  assigneeId: number;
-};
-
-type UserMap = Record<number, string>;
-
-type Worker = {
+export interface Worker {
   userId: number;
   fullname: string;
   userRole: string;
-};
+}
 
-const statusBadge: Record<string, string> = {
-  toDo: "bg-slate-100 text-slate-500",
-  inProgress: "bg-blue-50 text-blue-600",
-  done: "bg-emerald-50 text-emerald-600",
-  failed: "bg-red-50 text-red-500",
-};
+interface WorkerSearchProps {
+  onSelect: (worker: Worker) => void;
+}
 
-const statusLabel: Record<string, string> = {
-  toDo: "To Do",
-  inProgress: "In Progress",
-  done: "Done",
-  failed: "Failed",
-};
-
-export default function TaskAssignmentPanel() {
-  const [pivotDate, setPivotDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [targetWorker, setTargetWorker] = useState<Worker | null>(null);
-  const [taskTitle, setTaskTitle] = useState("");
-  const [instructions, setInstructions] = useState("");
+export default function WorkerSearch({ onSelect }: WorkerSearchProps) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(false);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [userMap, setUserMap] = useState<UserMap>({});
-  const [workers, setWorkers] = useState<Worker[]>([]);
-  const [showForm, setShowForm] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-
-  const getWeekDays = (date: Date) => {
-    const tempDate = new Date(date);
-    const day = tempDate.getDay();
-    const diff = tempDate.getDate() - day + (day === 0 ? -6 : 1);
-    const monday = new Date(tempDate.setDate(diff));
-
-    return Array.from({ length: 7 }).map((_, i) => {
-      const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
-      return d;
-    });
-  };
-
-  const weekDays = getWeekDays(pivotDate);
-
-  const fetchTasks = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${apiUrl}/api/tasks`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (res.ok) setTasks(await res.json());
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const fetchUsers = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${apiUrl}/api/users`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (res.ok) {
-        const users = await res.json();
-
-        setWorkers(users);
-
-        const map: UserMap = {};
-        users.forEach((u: Worker) => {
-          map[u.userId] = u.fullname;
-        });
-
-        setUserMap(map);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetchTasks();
-    fetchUsers();
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        wrapperRef.current &&
+        !wrapperRef.current.contains(event.target as Node)
+      ) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () =>
+      document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const getTasksForDate = (date: Date) =>
-    tasks.filter(
-      (t) => new Date(t.dueDate).toDateString() === date.toDateString()
-    );
+  useEffect(() => {
+    const fetchWorkers = async () => {
+      setLoading(true);
 
-  const changeWeek = (direction: "next" | "prev") => {
-    const newPivot = new Date(pivotDate);
-    newPivot.setDate(pivotDate.getDate() + (direction === "next" ? 7 : -7));
-    setPivotDate(newPivot);
-  };
+      try {
+        const token = localStorage.getItem("token");
 
-  const handleSendTask = async () => {
-    if (!selectedDate) return alert("Please select a date.");
-    if (!targetWorker) return alert("Please select a worker.");
-    if (!taskTitle.trim()) return alert("Please enter a title.");
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/users/search?q=${query}&role=worker`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
-    setLoading(true);
+        if (res.status === 401) {
+          setResults([]);
+          return;
+        }
 
-    try {
-      const token = localStorage.getItem("token");
-
-      const response = await fetch(`${apiUrl}/api/tasks/create`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          workerId: targetWorker.userId,
-          date: selectedDate.toISOString(),
-          title: taskTitle.trim(),
-          description: instructions,
-        }),
-      });
-
-      if (response.ok) {
-        await fetchTasks();
-        setTaskTitle("");
-        setInstructions("");
-        setTargetWorker(null);
-        setSelectedDate(null);
-        setShowForm(false);
-        alert("Task assigned!");
-      } else {
-        const errorData = await response.json();
-        alert(errorData.message || "Failed");
+        const data = await res.json();
+        setResults(Array.isArray(data) ? data : []);
+      } catch (err) {
+        setResults([]);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      alert("Server error");
-    } finally {
-      setLoading(false);
+    };
+
+    if (showDropdown) {
+      const timer = setTimeout(fetchWorkers, 200);
+      return () => clearTimeout(timer);
     }
-  };
+  }, [query, showDropdown]);
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500 mb-1">
-            Supervisor
-          </p>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-            Dashboard
-          </h1>
-        </div>
+    <div ref={wrapperRef} className="relative w-full">
+      <div className="relative">
+        <input
+          type="text"
+          className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-slate-900 font-bold placeholder:text-slate-300 focus:ring-4 focus:ring-slate-100 transition-all outline-none"
+          placeholder="Search worker name..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => setShowDropdown(true)}
+        />
 
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className={`px-6 py-3 rounded-2xl text-[13px] font-black transition-all active:scale-95 shadow-lg ${
-              showForm
-                ? "bg-white text-slate-900 border border-slate-200"
-                : "bg-indigo-600 text-white hover:bg-indigo-700"
-            }`}
-          >
-            {showForm ? "✕ Close" : "+ Create Task"}
-          </button>
-
-          <div className="flex items-center bg-white border border-slate-200 rounded-2xl p-1 shadow-sm">
-            <button onClick={() => changeWeek("prev")} className="p-2">
-              ◀
-            </button>
-            <div className="px-3 text-[10px] font-black uppercase text-slate-900 min-w-[150px] text-center">
-              {weekDays[0].toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              })}{" "}
-              —{" "}
-              {weekDays[6].toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              })}
-            </div>
-            <button onClick={() => changeWeek("next")} className="p-2">
-              ▶
-            </button>
-          </div>
-        </div>
+        {loading && (
+          <div className="absolute right-4 top-4 animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full" />
+        )}
       </div>
 
-      {/* Create Task Form */}
-      {showForm && (
-        <div className="bg-white rounded-[32px] shadow-2xl p-6 sm:p-10 border">
-          <h2 className="text-xl font-black text-center mb-8">New Task</h2>
-
-          <div className="grid md:grid-cols-2 gap-8">
-            {/* Worker dropdown */}
-            <div>
-              <label className="text-[10px] font-black uppercase text-indigo-500">
-                Select Worker
-              </label>
-
-              <select
-                className="w-full mt-2 bg-slate-50 rounded-[20px] px-5 py-4 text-sm font-extrabold border"
-                value={targetWorker?.userId || ""}
-                onChange={(e) => {
-                  const id = Number(e.target.value);
-                  const worker =
-                    workers.find((w) => w.userId === id) || null;
-                  setTargetWorker(worker);
-                }}
-              >
-                <option value="">Select a worker...</option>
-                {workers.map((w) => (
-                  <option key={w.userId} value={w.userId}>
-                    {w.fullname}
-                  </option>
-                ))}
-              </select>
-
-              {targetWorker && (
-                <div className="mt-4 p-4 bg-slate-900 text-white rounded-2xl">
-                  <p className="font-black">{targetWorker.fullname}</p>
-                  <p className="text-xs opacity-50">{targetWorker.userRole}</p>
-                </div>
-              )}
+      {showDropdown && (
+        <div className="absolute z-50 w-full mt-2 bg-white border border-slate-100 rounded-3xl shadow-2xl max-h-60 overflow-y-auto p-2">
+          {results.length === 0 ? (
+            <div className="px-4 py-3 text-sm text-slate-400 font-bold">
+              No workers found
             </div>
-
-            {/* Task details */}
-            <div className="space-y-3">
-              <input
-                className="w-full bg-slate-50 rounded-[20px] px-5 py-4 font-extrabold"
-                placeholder="Task title..."
-                value={taskTitle}
-                onChange={(e) => setTaskTitle(e.target.value)}
-              />
-
-              <textarea
-                className="w-full bg-slate-50 rounded-[20px] px-5 py-4 font-bold h-24"
-                placeholder="Instructions..."
-                value={instructions}
-                onChange={(e) => setInstructions(e.target.value)}
-              />
-
-              <input
-                type="date"
-                className="w-full bg-slate-50 rounded-[20px] px-5 py-4 font-extrabold"
-                value={
-                  selectedDate
-                    ? selectedDate.toISOString().split("T")[0]
-                    : ""
-                }
-                onChange={(e) =>
-                  setSelectedDate(
-                    e.target.value
-                      ? new Date(e.target.value + "T00:00:00")
-                      : null
-                  )
-                }
-              />
-
+          ) : (
+            results.map((worker) => (
               <button
-                onClick={handleSendTask}
-                disabled={!targetWorker || !taskTitle || !selectedDate || loading}
-                className="w-full bg-indigo-600 text-white rounded-[20px] py-4 font-black disabled:opacity-40"
+                key={worker.userId}
+                type="button"
+                onClick={() => {
+                  onSelect(worker);
+                  setQuery(worker.fullname);
+                  setResults([]);
+                  setShowDropdown(false);
+                }}
+                className="w-full text-left px-4 py-3 hover:bg-slate-50 rounded-2xl transition-colors flex flex-col"
               >
-                {loading ? "Saving..." : "Assign Task"}
+                <span className="font-bold text-slate-800">
+                  {worker.fullname}
+                </span>
+                <span className="text-xs text-slate-400 uppercase tracking-widest font-bold">
+                  {worker.userRole}
+                </span>
               </button>
-            </div>
-          </div>
+            ))
+          )}
         </div>
       )}
-
-      {/* Weekly Grid (unchanged logic) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4">
-        {weekDays.map((date) => {
-          const isToday =
-            new Date().toDateString() === date.toDateString();
-
-          const dayTasks = getTasksForDate(date);
-
-          return (
-            <div key={date.toISOString()} className="border rounded-xl p-2">
-              <div className="text-center font-black">
-                {date.getDate()}
-              </div>
-
-              {dayTasks.map((task) => (
-                <div key={task.taskId} className="p-2 border mt-2">
-                  <p className="text-xs font-bold">
-                    {userMap[task.assigneeId]}
-                  </p>
-                  <p className="text-sm font-extrabold">{task.title}</p>
-                </div>
-              ))}
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 }
