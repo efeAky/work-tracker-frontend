@@ -12,7 +12,7 @@ type Task = {
 
 type UserMap = Record<number, string>;
 
-type User = {
+type Worker = {
   userId: number;
   fullname: string;
   userRole: string;
@@ -35,13 +35,13 @@ const statusLabel: Record<string, string> = {
 export default function TaskAssignmentPanel() {
   const [pivotDate, setPivotDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [targetWorker, setTargetWorker] = useState<User | null>(null);
+  const [targetWorker, setTargetWorker] = useState<Worker | null>(null);
   const [taskTitle, setTaskTitle] = useState("");
   const [instructions, setInstructions] = useState("");
   const [loading, setLoading] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [userMap, setUserMap] = useState<UserMap>({});
-  const [users, setUsers] = useState<User[]>([]);
+  const [workers, setWorkers] = useState<Worker[]>([]);
   const [showForm, setShowForm] = useState(false);
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
@@ -67,6 +67,7 @@ export default function TaskAssignmentPanel() {
       const res = await fetch(`${apiUrl}/api/tasks`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       if (res.ok) setTasks(await res.json());
     } catch (err) {
       console.error(err);
@@ -81,13 +82,15 @@ export default function TaskAssignmentPanel() {
       });
 
       if (res.ok) {
-        const usersData = await res.json();
-        setUsers(usersData);
+        const users = await res.json();
+
+        setWorkers(users);
 
         const map: UserMap = {};
-        usersData.forEach((u: User) => {
+        users.forEach((u: Worker) => {
           map[u.userId] = u.fullname;
         });
+
         setUserMap(map);
       }
     } catch (err) {
@@ -117,6 +120,7 @@ export default function TaskAssignmentPanel() {
     if (!taskTitle.trim()) return alert("Please enter a title.");
 
     setLoading(true);
+
     try {
       const token = localStorage.getItem("token");
 
@@ -155,7 +159,6 @@ export default function TaskAssignmentPanel() {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
         <div>
@@ -170,120 +173,146 @@ export default function TaskAssignmentPanel() {
         <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={() => setShowForm(!showForm)}
-            className={`flex-1 sm:flex-none px-6 py-3 rounded-2xl text-[13px] font-black transition-all active:scale-95 shadow-lg ${
+            className={`px-6 py-3 rounded-2xl text-[13px] font-black transition-all active:scale-95 shadow-lg ${
               showForm
                 ? "bg-white text-slate-900 border border-slate-200"
-                : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100"
+                : "bg-indigo-600 text-white hover:bg-indigo-700"
             }`}
           >
             {showForm ? "✕ Close" : "+ Create Task"}
           </button>
+
+          <div className="flex items-center bg-white border border-slate-200 rounded-2xl p-1 shadow-sm">
+            <button onClick={() => changeWeek("prev")} className="p-2">
+              ◀
+            </button>
+            <div className="px-3 text-[10px] font-black uppercase text-slate-900 min-w-[150px] text-center">
+              {weekDays[0].toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })}{" "}
+              —{" "}
+              {weekDays[6].toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })}
+            </div>
+            <button onClick={() => changeWeek("next")} className="p-2">
+              ▶
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Create Task Form */}
       {showForm && (
-        <div className="bg-white rounded-[32px] shadow-2xl shadow-slate-200/50 border border-slate-100 p-6 sm:p-10 animate-in zoom-in-95 duration-300">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-xl font-black text-slate-900 mb-8 text-center uppercase tracking-tighter">
-              New Task
-            </h2>
+        <div className="bg-white rounded-[32px] shadow-2xl p-6 sm:p-10 border">
+          <h2 className="text-xl font-black text-center mb-8">New Task</h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* Worker dropdown */}
+            <div>
+              <label className="text-[10px] font-black uppercase text-indigo-500">
+                Select Worker
+              </label>
 
-              {/* Worker Dropdown */}
-              <div className="space-y-4">
-                <label className="block text-[10px] font-black uppercase text-indigo-500 tracking-[0.2em]">
-                  1. Select Worker
-                </label>
+              <select
+                className="w-full mt-2 bg-slate-50 rounded-[20px] px-5 py-4 text-sm font-extrabold border"
+                value={targetWorker?.userId || ""}
+                onChange={(e) => {
+                  const id = Number(e.target.value);
+                  const worker =
+                    workers.find((w) => w.userId === id) || null;
+                  setTargetWorker(worker);
+                }}
+              >
+                <option value="">Select a worker...</option>
+                {workers.map((w) => (
+                  <option key={w.userId} value={w.userId}>
+                    {w.fullname}
+                  </option>
+                ))}
+              </select>
 
-                <select
-                  className="w-full bg-slate-50 border-transparent rounded-[20px] px-5 py-4 text-slate-900 font-extrabold text-sm focus:bg-white focus:ring-4 focus:ring-indigo-100 transition-all outline-none border border-slate-50 focus:border-indigo-200"
-                  value={targetWorker?.userId || ""}
-                  onChange={(e) => {
-                    const selected = users.find(
-                      (u) => u.userId === Number(e.target.value)
-                    );
-                    setTargetWorker(selected || null);
-                  }}
-                >
-                  <option value="">Select worker...</option>
-                  {users
-                    .filter((u) => u.userRole === "worker")
-                    .map((u) => (
-                      <option key={u.userId} value={u.userId}>
-                        {u.fullname}
-                      </option>
-                    ))}
-                </select>
+              {targetWorker && (
+                <div className="mt-4 p-4 bg-slate-900 text-white rounded-2xl">
+                  <p className="font-black">{targetWorker.fullname}</p>
+                  <p className="text-xs opacity-50">{targetWorker.userRole}</p>
+                </div>
+              )}
+            </div>
 
-                {targetWorker && (
-                  <div className="p-4 bg-slate-900 text-white rounded-[24px] flex items-center gap-4 shadow-xl">
-                    <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center font-black">
-                      {targetWorker.fullname.charAt(0)}
-                    </div>
-                    <div>
-                      <p className="text-sm font-black">
-                        {targetWorker.fullname}
-                      </p>
-                      <p className="text-white/40 text-[9px] uppercase font-black">
-                        {targetWorker.userRole}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
+            {/* Task details */}
+            <div className="space-y-3">
+              <input
+                className="w-full bg-slate-50 rounded-[20px] px-5 py-4 font-extrabold"
+                placeholder="Task title..."
+                value={taskTitle}
+                onChange={(e) => setTaskTitle(e.target.value)}
+              />
 
-              {/* Task Details */}
-              <div className="space-y-4">
-                <label className="block text-[10px] font-black uppercase text-indigo-500 tracking-[0.2em]">
-                  2. Task Details
-                </label>
+              <textarea
+                className="w-full bg-slate-50 rounded-[20px] px-5 py-4 font-bold h-24"
+                placeholder="Instructions..."
+                value={instructions}
+                onChange={(e) => setInstructions(e.target.value)}
+              />
 
-                <input
-                  className="w-full bg-slate-50 rounded-[20px] px-5 py-4 font-extrabold text-sm"
-                  placeholder="Task title..."
-                  value={taskTitle}
-                  onChange={(e) => setTaskTitle(e.target.value)}
-                />
+              <input
+                type="date"
+                className="w-full bg-slate-50 rounded-[20px] px-5 py-4 font-extrabold"
+                value={
+                  selectedDate
+                    ? selectedDate.toISOString().split("T")[0]
+                    : ""
+                }
+                onChange={(e) =>
+                  setSelectedDate(
+                    e.target.value
+                      ? new Date(e.target.value + "T00:00:00")
+                      : null
+                  )
+                }
+              />
 
-                <textarea
-                  className="w-full bg-slate-50 rounded-[20px] px-5 py-4 font-bold text-sm h-24 resize-none"
-                  placeholder="Instructions..."
-                  value={instructions}
-                  onChange={(e) => setInstructions(e.target.value)}
-                />
-
-                <input
-                  type="date"
-                  className="w-full bg-slate-50 rounded-[20px] px-5 py-4 font-extrabold text-sm"
-                  value={
-                    selectedDate
-                      ? selectedDate.toISOString().split("T")[0]
-                      : ""
-                  }
-                  onChange={(e) =>
-                    setSelectedDate(
-                      e.target.value
-                        ? new Date(e.target.value + "T00:00:00")
-                        : null
-                    )
-                  }
-                />
-
-                <button
-                  onClick={handleSendTask}
-                  disabled={!targetWorker || !taskTitle || !selectedDate || loading}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-[20px] py-4 font-black text-sm"
-                >
-                  {loading ? "Saving..." : "Assign Task"}
-                </button>
-              </div>
-
+              <button
+                onClick={handleSendTask}
+                disabled={!targetWorker || !taskTitle || !selectedDate || loading}
+                className="w-full bg-indigo-600 text-white rounded-[20px] py-4 font-black disabled:opacity-40"
+              >
+                {loading ? "Saving..." : "Assign Task"}
+              </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Weekly Grid (unchanged logic) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4">
+        {weekDays.map((date) => {
+          const isToday =
+            new Date().toDateString() === date.toDateString();
+
+          const dayTasks = getTasksForDate(date);
+
+          return (
+            <div key={date.toISOString()} className="border rounded-xl p-2">
+              <div className="text-center font-black">
+                {date.getDate()}
+              </div>
+
+              {dayTasks.map((task) => (
+                <div key={task.taskId} className="p-2 border mt-2">
+                  <p className="text-xs font-bold">
+                    {userMap[task.assigneeId]}
+                  </p>
+                  <p className="text-sm font-extrabold">{task.title}</p>
+                </div>
+              ))}
+            </div>
+          );
+        })}
+      </div>
     </div>
-  ); 
+  );
 }
