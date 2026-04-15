@@ -285,5 +285,5 @@ export default function TaskAssignmentPanel() {
         </div>
       )}
     </div>
-  );
+  ); 
 }
