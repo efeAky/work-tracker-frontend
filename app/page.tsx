@@ -41,11 +41,6 @@ export default function LandingPage() {
           >
             Log In
           </Link>
-          <button
-            className="w-full sm:w-auto px-8 py-4 bg-white border border-slate-200 text-slate-900 font-black rounded-xl hover:bg-slate-50 transition-all text-sm sm:text-base"
-          >
-            Watch Overview
-          </button>
         </div>
       </section>
 
