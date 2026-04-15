@@ -1,124 +1,260 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
 
-export interface Worker {
-  userId: number;
-  fullname: string;
-  userRole: string;
-}
+import { useState, useEffect } from "react";
+import WorkerSearch, {
+  Worker,
+} from "@/clientComponents/supervisor/WorkerSearch";
 
-interface WorkerSearchProps {
-  onSelect: (worker: Worker) => void;
-}
+type Task = {
+  taskId: number;
+  title: string;
+  dueDate: string;
+  status: "toDo" | "inProgress" | "done" | "failed";
+  assigneeId: number;
+};
 
-export default function WorkerSearch({ onSelect }: WorkerSearchProps) {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<Worker[]>([]);
+type UserMap = Record<number, string>;
+
+const statusLabel: Record<string, string> = {
+  toDo: "To Do",
+  inProgress: "In Progress",
+  done: "Done",
+  failed: "Failed",
+};
+
+const statusBorder: Record<string, string> = {
+  toDo: "#cbd5e1",
+  inProgress: "#6366f1",
+  done: "#10b981",
+  failed: "#ef4444",
+};
+
+export default function TaskAssignmentPanel() {
+  const [pivotDate, setPivotDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [targetWorker, setTargetWorker] = useState<Worker | null>(null);
+  const [taskTitle, setTaskTitle] = useState("");
+  const [instructions, setInstructions] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [userMap, setUserMap] = useState<UserMap>({});
+  const [showForm, setShowForm] = useState(false);
 
-  const wrapperRef = useRef<HTMLDivElement>(null);
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+
+  const getWeekDays = (date: Date) => {
+    const temp = new Date(date);
+    const day = temp.getDay();
+    const diff = temp.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(temp.setDate(diff));
+
+    return Array.from({ length: 7 }).map((_, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      return d;
+    });
+  };
+
+  const weekDays = getWeekDays(pivotDate);
+
+  const fetchTasks = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(`${apiUrl}/api/tasks`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.ok) setTasks(await res.json());
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(`${apiUrl}/api/users`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.ok) {
+        const users = await res.json();
+        const map: UserMap = {};
+
+        users.forEach((u: any) => {
+          map[u.userId] = u.fullname;
+        });
+
+        setUserMap(map);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        wrapperRef.current &&
-        !wrapperRef.current.contains(event.target as Node)
-      ) {
-        setShowDropdown(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () =>
-      document.removeEventListener("mousedown", handleClickOutside);
+    fetchTasks();
+    fetchUsers();
   }, []);
 
-  useEffect(() => {
-    const fetchWorkers = async () => {
-      setLoading(true);
+  const getTasksForDate = (date: Date) =>
+    tasks.filter(
+      (t) =>
+        new Date(t.dueDate).toDateString() === date.toDateString()
+    );
 
-      try {
-        const token = localStorage.getItem("token");
+  const changeWeek = (dir: "next" | "prev") => {
+    const newDate = new Date(pivotDate);
+    newDate.setDate(pivotDate.getDate() + (dir === "next" ? 7 : -7));
+    setPivotDate(newDate);
+  };
 
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/users/search?q=${query}&role=worker`,
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+  const handleSendTask = async () => {
+    if (!selectedDate || !targetWorker || !taskTitle.trim()) return;
 
-        if (res.status === 401) {
-          setResults([]);
-          return;
-        }
+    setLoading(true);
 
-        const data = await res.json();
-        setResults(Array.isArray(data) ? data : []);
-      } catch (err) {
-        setResults([]);
-      } finally {
-        setLoading(false);
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(`${apiUrl}/api/tasks/create`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          workerId: targetWorker.userId,
+          date: selectedDate.toISOString(),
+          title: taskTitle.trim(),
+          description: instructions,
+        }),
+      });
+
+      if (res.ok) {
+        await fetchTasks();
+        setTaskTitle("");
+        setInstructions("");
+        setTargetWorker(null);
+        setSelectedDate(null);
+        setShowForm(false);
       }
-    };
-
-    if (showDropdown) {
-      const timer = setTimeout(fetchWorkers, 200);
-      return () => clearTimeout(timer);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-  }, [query, showDropdown]);
+  };
 
   return (
-    <div ref={wrapperRef} className="relative w-full">
-      <div className="relative">
-        <input
-          type="text"
-          className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-slate-900 font-bold placeholder:text-slate-300 focus:ring-4 focus:ring-slate-100 transition-all outline-none"
-          placeholder="Search worker name..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => setShowDropdown(true)}
-        />
+    <div className="space-y-8">
 
-        {loading && (
-          <div className="absolute right-4 top-4 animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full" />
-        )}
+      {/* Header */}
+      <div className="flex justify-between items-end">
+        <div>
+          <h1 className="text-3xl font-black">Dashboard</h1>
+        </div>
+
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="px-4 py-2 bg-indigo-600 text-white rounded-xl"
+        >
+          {showForm ? "Close" : "Create Task"}
+        </button>
       </div>
 
-      {showDropdown && (
-        <div className="absolute z-50 w-full mt-2 bg-white border border-slate-100 rounded-3xl shadow-2xl max-h-60 overflow-y-auto p-2">
-          {results.length === 0 ? (
-            <div className="px-4 py-3 text-sm text-slate-400 font-bold">
-              No workers found
+      {/* FORM */}
+      {showForm && (
+        <div className="p-6 bg-white rounded-2xl border space-y-4">
+
+          {/* IMPORTANT FIX IS HERE */}
+          <WorkerSearch
+            onSelect={(worker) => setTargetWorker(worker)}
+          />
+
+          {targetWorker && (
+            <div className="text-sm text-gray-600">
+              Selected: <b>{targetWorker.fullname}</b>
             </div>
-          ) : (
-            results.map((worker) => (
-              <button
-                key={worker.userId}
-                type="button"
-                onClick={() => {
-                  onSelect(worker);
-                  setQuery(worker.fullname);
-                  setResults([]);
-                  setShowDropdown(false);
-                }}
-                className="w-full text-left px-4 py-3 hover:bg-slate-50 rounded-2xl transition-colors flex flex-col"
-              >
-                <span className="font-bold text-slate-800">
-                  {worker.fullname}
-                </span>
-                <span className="text-xs text-slate-400 uppercase tracking-widest font-bold">
-                  {worker.userRole}
-                </span>
-              </button>
-            ))
           )}
+
+          <input
+            className="w-full border p-2 rounded"
+            placeholder="Task title"
+            value={taskTitle}
+            onChange={(e) => setTaskTitle(e.target.value)}
+          />
+
+          <textarea
+            className="w-full border p-2 rounded"
+            placeholder="Instructions"
+            value={instructions}
+            onChange={(e) => setInstructions(e.target.value)}
+          />
+
+          <input
+            type="date"
+            className="border p-2 rounded"
+            value={
+              selectedDate
+                ? selectedDate.toISOString().split("T")[0]
+                : ""
+            }
+            onChange={(e) =>
+              setSelectedDate(
+                e.target.value
+                  ? new Date(e.target.value)
+                  : null
+              )
+            }
+          />
+
+          <button
+            onClick={handleSendTask}
+            disabled={!targetWorker || !taskTitle || loading}
+            className="w-full bg-indigo-600 text-white py-2 rounded-xl"
+          >
+            {loading ? "Saving..." : "Assign Task"}
+          </button>
         </div>
       )}
+
+      {/* WEEK GRID */}
+      <div className="grid grid-cols-7 gap-2">
+        {weekDays.map((date) => {
+          const dayTasks = getTasksForDate(date);
+
+          return (
+            <div key={date.toISOString()} className="border p-2 rounded">
+              <div className="text-xs font-bold mb-2">
+                {date.toDateString()}
+              </div>
+
+              {dayTasks.map((task) => (
+                <div
+                  key={task.taskId}
+                  className="p-2 mb-2 border-l-4 bg-white"
+                  style={{
+                    borderLeftColor: statusBorder[task.status],
+                  }}
+                >
+                  <div className="text-xs font-bold">
+                    {userMap[task.assigneeId] || task.assigneeId}
+                  </div>
+
+                  <div className="text-sm">{task.title}</div>
+
+                  <div className="text-[10px] text-gray-400">
+                    {statusLabel[task.status]}
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
