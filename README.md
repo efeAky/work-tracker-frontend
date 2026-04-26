@@ -1,21 +1,3 @@
-Live : https://work-tracker-frontend-green.vercel.app/
-## Login as Worker:
-gmail: worker@gmail.com
-
-password: worker123
-
-## Login as Supervisor
-gmail: Supervisor
-
-password: supervisor123
-
-
-
-
-
-
-
-
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
